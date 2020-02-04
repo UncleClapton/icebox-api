@@ -1,0 +1,50 @@
+{
+  "name": "icebox-api",
+  "version": "2.0.0",
+  "main": "dist/server.js",
+  "repository": "https://github.com/UncleClapton/icebox-api.git",
+  "author": "Cameron Welter <camjwelt@gmail.com>",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "scripts": {
+    "lint": "yarn eslint .",
+    "build": "rm -rf dist && rollup --config",
+    "pepare": "yarn build",
+    "run": "node dist/server.js"
+  },
+  "dependencies": {
+    "koa": "^2.11.0",
+    "koa-router": "^8.0.6",
+    "mpc-js": "^1.2.1",
+    "random-number-csprng": "^1.0.2",
+    "uuid": "^3.4.0",
+    "ws": "^7.2.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.3",
+    "@babel/core": "^7.8.3",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-decorators": "^7.8.3",
+    "@babel/plugin-proposal-export-default-from": "^7.8.3",
+    "@babel/plugin-proposal-export-namespace-from": "^7.8.3",
+    "@babel/plugin-proposal-function-bind": "^7.8.3",
+    "@babel/plugin-proposal-function-sent": "^7.8.3",
+    "@babel/plugin-proposal-logical-assignment-operators": "^7.8.3",
+    "@babel/plugin-proposal-numeric-separator": "^7.8.3",
+    "@babel/plugin-proposal-optional-catch-binding": "^7.8.3",
+    "@babel/plugin-proposal-throw-expressions": "^7.8.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.8.3",
+    "@babel/plugin-transform-strict-mode": "^7.8.3",
+    "@babel/preset-env": "^7.8.3",
+    "@fuelrats/eslint-config": "^2.0.0-canary.2",
+    "@rollup/plugin-node-resolve": "^7.0.0",
+    "babel-eslint": "^10.0.3",
+    "eslint": "^6.8.0",
+    "eslint-plugin-babel": "^5.3.0",
+    "eslint-plugin-import": "^2.20.0",
+    "eslint-plugin-jsdoc": "^21.0.0",
+    "rollup": "^1.29.1",
+    "rollup-plugin-auto-external": "^2.0.0",
+    "rollup-plugin-babel": "^4.3.3"
+  }
+}
