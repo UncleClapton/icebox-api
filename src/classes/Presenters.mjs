@@ -15,4 +15,17 @@ export default class DataPresenters {
       },
     }
   }
+
+  static presentWSMessage (action, data, restMeta) {
+    if (typeof action !== 'string' || !data) {
+      throw new TypeError('Action must be string and data must exist')
+    }
+    return {
+      data,
+      meta: {
+        action,
+        ...restMeta,
+      },
+    }
+  }
 }

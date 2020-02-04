@@ -1,4 +1,5 @@
 import ws from 'ws'
+import Presenters from '../classes/Presenters'
 
 // eslint-disable-next-line import/order
 const uuid = require('uuid/v4')
@@ -78,12 +79,9 @@ export default class Socket {
 
   sendMessage (client, action, data) {
     return new Promise((resolve, reject) => {
-      client.send(JSON.stringify({
-        data,
-        meta: {
-          action,
-        },
-      }), (status) => {
+      const message = Presenters.presentWSMessage(action, data)
+
+      client.send(JSON.stringify(message), (status) => {
         if (status instanceof Error) {
           reject(status.message || 'Unknown Problem')
         } else {
