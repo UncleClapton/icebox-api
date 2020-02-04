@@ -99,7 +99,7 @@ export default class Mpd {
     return new Promise((resolve, reject) => {
       this.mpc.once('ready', async () => {
         await this.mpc.connection.password(this.config.password)
-        this.console.log('[MPDC]     MPDC Connected - Gathering database info')
+        console.log('[MPDC]     MPDC Connected - Gathering database info')
         await this.updateDatabase()
         resolve()
       })
