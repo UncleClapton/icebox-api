@@ -5,14 +5,12 @@ import mpcJs from 'mpc-js'
 
 
 import AdvMath from '../classes/AdvMath'
-import EventBuffer from '../classes/EventBuffer'
 import DataPresenters from '../classes/Presenters'
 
 
 
 
 
-const mpdBuffer = new EventBuffer()
 const DEFAULT_MINPLAYLISTLENGTH = 5
 
 
@@ -45,61 +43,70 @@ export default class Mpd {
     client.sendMessage('update', curData)
   }
 
-
-  @mpdBuffer.asListener('mpd/player')
   async updatePlayer () {
     const nextPayload = await this.getClientPayload()
-    this.socket.broadcast(nextPayload)
+    this.socket.broadcast('update', nextPayload)
   }
 
-
-  @mpdBuffer.asListener('mpd/playlist')
   async updatePlaylist () {
     const currentPlaylist = await this.mpc.currentPlaylist.playlistInfo()
     let playlistDeficit = (this.config?.minPlaylistLength ?? DEFAULT_MINPLAYLISTLENGTH) - currentPlaylist.length
 
-    const newSongs = []
+    if (playlistDeficit > 0) {
+      const newSongs = []
 
-    while (playlistDeficit > 0) {
+      console.log(`[MPDC]  Updating Playlist - Adding ${playlistDeficit} song(s)`)
+
+      while (playlistDeficit > 0) {
       // Get next song
-      const nextSongPos = AdvMath.getBiasedRandom(0, this.library.length)
-      const nextSong = this.library[nextSongPos]
+        const nextSongPos = AdvMath.getBiasedRandom(0, this.library.length)
+        const nextSong = this.library[nextSongPos]
 
-      // Add song to our playlist
-      newSongs.push(this.mpc.currentPlaylist.add(nextSong))
+        // Add song to our playlist
+        newSongs.push(this.mpc.currentPlaylist.add(nextSong))
 
-      // push song to the back of the library list
-      this.library = this.library.slice(nextSongPos + 1)
-      this.library.push(nextSong)
 
-      // decrement deficit
-      playlistDeficit -= 1
+        // push song to the back of the library list
+        this.library.splice(nextSongPos, 1)
+        this.library.push(nextSong)
+
+        // decrement deficit
+        playlistDeficit -= 1
+
+        console.log(`[MPDC]         Added Song - ${nextSong}`)
+      }
+
+      // Wait for all songs to be added, then update the player and return.
+      await Promise.all(newSongs)
     }
-
-    // Wait for all songs to be added, then update the player and return.
-    await Promise.all(newSongs)
-    await this.updatePlayer()
   }
 
-
-  @mpdBuffer.asListener('mpd/database')
   async updateDatabase () {
-    const listAllResponse = await this.mpc.sendCommand('listAll')
-    this.library = AdvMath.shuffleArray(listAllResponse.reduce((acc, line) => {
-      if (line.startsWith('file')) {
-        acc.push(line.substring(line.indexOf(':') + 2))
-      }
-      return acc
-    }, []))
+    try {
+      const oldSize = this.library.length
 
-    await this.updatePlaylist()
+      const listAllResponse = await this.mpc.sendCommand('listall')
+      this.library = AdvMath.shuffleArray(listAllResponse.reduce((acc, line) => {
+        if (line.startsWith('file')) {
+          acc.push(line.substring(line.indexOf(':') + 2))
+        }
+        return acc
+      }, []))
+
+      console.log(`[MPDC]   Updated Database - ${oldSize} Songs -> ${this.library.length} Songs!`)
+
+      await this.updatePlaylist()
+      await this.updatePlayer()
+    } catch (error) {
+      console.log(`[MPDC]     DATABASE ERROR - Unable to update database: ${error.message}`, error)
+    }
   }
 
   connect () {
     return new Promise((resolve, reject) => {
       this.mpc.once('ready', async () => {
         await this.mpc.connection.password(this.config.password)
-        console.log('[MPDC]     MPDC Connected - Gathering database info')
+        console.log('[MPDC]     MPDC Connected - Gathering database info...')
         await this.updateDatabase()
         resolve()
       })
@@ -117,18 +124,9 @@ export default class Mpd {
     this.socket = socket
     this.mpc = new mpcJs.MPC()
 
-    socket.on('connection', this.handleNewSocketConnection)
-
-    this.mpc.on('changed-player', () => {
-      mpdBuffer.dispatch({ type: 'mpd/player' })
-    })
-
-    this.mpc.on('changed-playlist', () => {
-      mpdBuffer.dispatch({ type: 'mpd/playlist' })
-    })
-
-    this.mpc.on('changed-update', () => {
-      mpdBuffer.dispatch({ type: 'mpd/database' })
-    })
+    socket.on('connection', this.handleNewSocketConnection.bind(this))
+    this.mpc.on('changed-player', this.updatePlayer.bind(this))
+    this.mpc.on('changed-playlist', this.updatePlaylist.bind(this))
+    this.mpc.on('changed-update', this.updateDatabase.bind(this))
   }
 }

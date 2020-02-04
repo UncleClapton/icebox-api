@@ -1,5 +1,6 @@
 import ws from 'ws'
 
+// eslint-disable-next-line import/order
 const uuid = require('uuid/v4')
 
 
@@ -17,6 +18,10 @@ export default class Socket {
     client.isAlive = true
     client.remoteAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     client.clientId = uuid()
+    client.sendMessage = (action, data) => {
+      this.sendMessage(client, action, data)
+    }
+
     client
       .on('pong', () => {
         client.isAlive = true
@@ -32,7 +37,7 @@ export default class Socket {
 
     client.send(JSON.stringify({
       data: {
-        message: `Welcome to ${this.config.server.name}.
+        message: `Welcome to ${this.config.name}.
           Please send the provided id in your message's meta object.
           Any message that doesn't provide a client id will be ignored.
           If you have an authentication token to send, do so now.`,
@@ -45,14 +50,14 @@ export default class Socket {
   }
 
   healthCheck () {
-    this.socket.clients.forEach((client) => {
+    this.socket?.clients?.forEach?.((client) => {
       if (!client.isAlive) {
         client.terminate()
         return
       }
 
       client.isAlive = false
-      ws.ping(() => {})
+      client.ping(() => {})
     })
   }
 
@@ -61,6 +66,8 @@ export default class Socket {
     this.socket = new ws.Server({
       server,
     })
+
+    this.socket.on('connection', this.handleNewConnection.bind(this))
 
     setInterval(this.healthCheck.bind(this), HEALTHCHECK_INTERVAL)
   }
@@ -78,7 +85,7 @@ export default class Socket {
         },
       }), (status) => {
         if (status instanceof Error) {
-          reject(status.message ? status.message : null)
+          reject(status.message || 'Unknown Problem')
         } else {
           resolve()
         }
@@ -87,11 +94,14 @@ export default class Socket {
   }
 
   broadcast (action, data) {
-    return Promise.all(this.socket.clients.map((client) => {
+    const messages = []
+
+    this.socket.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
-        return this.sendMessage(client, action, data)
+        messages.push(this.sendMessage(client, action, data))
       }
-      return Promise.resolve()
-    }))
+    })
+
+    return Promise.all(messages)
   }
 }
